@@ -1,20 +1,18 @@
-const CACHE_NAME = 'housekeeper-v1';
-
-// FIXED: Removed the './' and slashes entirely so assets load correctly 
-// no matter if the app is run locally or on a GitHub subfolder path!
-const ASSETS_TO_CACHE = [
+const CACHE_NAME = 'housekeeper-v3'; // Incremented from v2 to force a hard update
+const ASSETS = [
   '/',
-  '/index.html',
-  '/style.css',
-  '/app.js',
-  '/manifest.json'
+  'style.css',
+  'app.js',
+  'manifest.json'
 ];
+// Keep the rest of your sw.js file exactly the same!
+
 
 // Install Service Worker and cache essential project files
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
+      return cache.addAll(ASSETS);
     })
   );
 });
