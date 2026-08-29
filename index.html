@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instant HouseKeeper</title>
+    <link rel="stylesheet" href="./style.css">
+    <link rel="manifest" href="manifest.json">
+
+</head>
+<body>
+    <header></header>
+    <main id="app">
+
+        <!-- VIEW 1: ROLE SELECTION -->
+        <section id="role-view" class="view">
+            <h2>Welcome to Instant Housekeeper</h2>
+            <p>Enter your details to clock in:</p>
+    
+            <!-- New Staff ID Input -->
+            <div style="margin-bottom: 20px;">
+              <label for="staff-id-input" style="font-weight: 600; display: block; margin-bottom: 6px;">Staff ID / Name:</label>
+              <input type="text" id="staff-id-input" placeholder="e.g. STF-042 or Chinedu" style="width: 100%; padding: 14px; border: 1px solid #dee2e6; border-radius: 8px; font-size: 1rem;">
+            </div>
+            <button id="btn-housekeeper">I am a Housekeeper</button>
+            <button id="btn-frontdesk">I am Front Desk</button>
+        </section>
+
+        <!-- VIEW 2: HOUSEKEEPER MOBILE DASHBOARD -->
+        <section id="housekeeper-view" class="view hidden">
+            <!-- UPDATED: Housekeeper Live Alerts section with Clear Button -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <h3 style="font-size: 0.9rem; color: #6c757d;">Live Alerts</h3>
+              <button id="btn-clear-hk-notifs" style="width: auto; margin-bottom: 0; padding: 4px 8px; font-size: 0.75rem; background-color: #6c757d; color: white;">Clear All</button>
+            </div>
+            <div id="housekeeper-notification-feed" style="margin-bottom: 16px; display: flex; flex-direction: column; gap: 8px; max-height: 30vh; overflow-y: auto; scrollbar-width: thin;"></div>
+        
+            <h2>My Assigned Rooms</h2>
+            <div id="housekeeper-rooms-container" style="scrollbar-width: thin; max-height: 63vh; overflow-y: auto;"></div>
+
+            <!-- Inside #housekeeper-view (Right above the logout button) -->
+            <button class="nav-history-btn" style="background-color: #6c757d; color: white;">📋 View My History Logs</button>
+
+            <!-- Inside #frontdesk-view (Right above the logout button) -->
+            <button class="nav-history-btn" style="background-color: #007bff; color: white;">📋 View Hotel Audit History</button>
+
+            <button class="back-btn">Logout</button>
+        </section>
+
+        <!-- VIEW 3: FRONT DESK DASHBOARD  -->
+        <section id="frontdesk-view" class="view hidden">
+            <h2>Live Room Status</h2>
+            <button id="nav-manager-deck-btn" class="hidden" style="background-color: #8a2be2; color: white; margin-bottom: 16px;">⚙️ Open Manager Control Deck</button>
+
+            <!-- UPDATED: Front Desk Live Alerts section with Clear Button -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <h3 style="font-size: 0.9rem; color: #6c757d;">Live Alerts</h3>
+              <button id="btn-clear-fd-notifs" style="width: auto; margin-bottom: 0; padding: 4px 8px; font-size: 0.75rem; background-color: #6c757d; color: white;">Clear All</button>
+            </div>
+            <div id="frontdesk-notification-feed" style="margin-bottom: 16px; display: flex; flex-direction: column; gap: 8px; max-height: 30vh;  overflow-y: auto; scrollbar-width: thin;"></div>
+        
+            <div class="bulk-controls">
+                <button id="btn-bulk-dirty" class="control-btn warning">Mark Selected Dirty</button>
+                <button id="btn-all-dirty" class="control-btn danger">Reset All to Dirty</button>
+            </div>
+
+            <div id="frontdesk-grid-container" class="status-grid"></div>
+
+            
+            <!-- Inside #housekeeper-view (Right above the logout button) -->
+            <button class="nav-history-btn" style="background-color: #6c757d; color: white;">📋 View My History Logs</button>
+
+            <!-- Inside #frontdesk-view (Right above the logout button) -->
+            <button class="nav-history-btn" style="background-color: #007bff; color: white;">📋 View Hotel Audit History</button>
+
+            <button class="back-btn">Logout</button>
+        </section>
+
+
+        <!-- SHORT-STAY TIMER MODAL POPUP (Place this right before closing </main>) -->
+        <div id="timer-modal" class="modal hidden">
+          <div class="modal-content">
+            <h3>Set "In Use" Short Stay</h3>
+            <p id="modal-room-label">Room: None</p>
+            
+            <label for="stay-hours">Duration (1 - 12 Hours):</label>
+            <input type="number" id="stay-hours" min="1" max="12" value="2">
+            
+            <div class="modal-actions">
+              <button id="btn-confirm-timer" class="success-btn">Start Timer</button>
+              <button id="btn-cancel-modal" class="cancel-btn">Cancel</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- HOUSEKEEPER CLEAN CONFIRMATION MODAL -->
+        <div id="clean-confirm-modal" class="modal hidden">
+          <div class="modal-content">
+            <h3>Confirm Room Clean</h3>
+            <p id="confirm-modal-room-label" style="font-weight: bold; color: var(--primary-color);">Room: None</p>
+            
+            <p style="font-size: 0.85rem; margin-bottom: 12px;">Select who should receive this update notice:</p>
+            
+            <!-- Checkbox Options Layout -->
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; text-align: left;">
+              <label style="display: flex; align-items: center; gap: 10px; font-weight: 600;">
+                <input type="checkbox" id="notify-fd" checked disabled style="width:18px; height:18px;">
+                Front Desk (Required)
+              </label>
+              
+              <label style="display: flex; align-items: center; gap: 10px;">
+                <input type="checkbox" id="notify-sup" style="width:18px; height:18px;">
+                Supervisor
+              </label>
+              
+              <label style="display: flex; align-items: center; gap: 10px;">
+                <input type="checkbox" id="notify-mgr" style="width:18px; height:18px;">
+                Manager
+              </label>
+            </div>
+            
+            <div class="modal-actions">
+              <button id="btn-submit-clean-notif" class="success-btn">Confirm & Send</button>
+              <button id="btn-close-clean-modal" class="cancel-btn">Cancel Entirely</button>
+            </div>
+          </div>
+        </div>
+      
+        <!-- VIEW 4: AUDIT HISTORY LOGS VIEW -->
+        <section id="history-view" class="view hidden">
+          <h2>Performance History Logs</h2>
+          <p id="history-tier-label" style="font-size: 0.85rem; font-style: italic; margin-bottom: 12px;"></p>
+          
+          <!-- Management Filters Panel (Hidden from standard housekeepers) -->
+          <div id="management-filters" class="hidden" style="background-color: #e9ecef; padding: 12px; border-radius: 8px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 8px;">
+            <div>
+              <label for="filter-date" style="font-size: 0.8rem; font-weight: bold;">Select Date:</label>
+              <input type="text" id="filter-date" placeholder="e.g. 28/08/2026" style="width: 100%; padding: 6px; border: 1px solid #ced4da; border-radius: 4px;">
+            </div>
+            <div>
+              <label for="filter-staff" style="font-size: 0.8rem; font-weight: bold;">Filter by Staff ID:</label>
+              <input type="text" id="filter-staff" placeholder="e.g. STF-001" style="width: 100%; padding: 6px; border: 1px solid #ced4da; border-radius: 4px;">
+            </div>
+          </div>
+      
+          <!-- The target container where logs will be injected and grouped by date strings -->
+          <div id="history-logs-container" style="flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; max-height: 60vh; padding-right: 4px;"></div>
+          
+          <button id="btn-back-from-history" class="back-btn" style="margin-top: 16px;">Back to Dashboard</button>
+        </section>
+      
+        <!-- VIEW 5: MANAGER COMMAND CENTER CONTROL DECK -->
+        <section id="manager-deck-view" class="view hidden">
+          <h2>Manager Control Deck</h2>
+          <p style="font-size: 0.85rem; color: #6c757d; margin-bottom: 16px;">Configure your hotel rooms and approve staff credentials.</p>
+      
+          <!-- SUB-SECTION A: ROOM MANAGEMENT PANEL -->
+          <div style="background-color: #f1f3f5; padding: 16px; border-radius: 12px; margin-bottom: 16px;">
+            <h3 style="font-size: 1rem; margin-bottom: 12px; color: #495057;">🏨 Room Configuration</h3>
+            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+              <input type="text" id="new-room-id" placeholder="e.g. Room 205 or Suite A" style="flex-grow: 1; padding: 10px; border: 1px solid #ced4da; border-radius: 6px;">
+              <button id="btn-add-room" style="width: auto; margin-bottom: 0; padding: 10px 16px; background-color: var(--success-color); color: white;">Add</button>
+            </div>
+            <!-- List of current rooms with delete triggers -->
+            <div id="manager-rooms-list" style="max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;"></div>
+          </div>
+      
+          <!-- SUB-SECTION B: STAFF PROVISIONING PANEL -->
+          <div style="background-color: #f1f3f5; padding: 16px; border-radius: 12px; margin-bottom: 16px;">
+            <h3 style="font-size: 1rem; margin-bottom: 12px; color: #495057;">👤 Provision Staff Account</h3>
+            
+            <!-- Max limit alert warning text label pointer for level 001 managers -->
+            <p id="manager-limit-warning" style="font-size: 0.75rem; color: #dc3545; font-weight: bold;" class="hidden">⚠️ Manager account slots full (Max 3 reached).</p>
+      
+            <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
+              <input type="text" id="new-staff-id" placeholder="Staff ID (e.g. STF-005)" style="padding: 10px; border: 1px solid #ced4da; border-radius: 6px;">
+              <input type="text" id="new-staff-name" placeholder="Staff Full Name" style="padding: 10px; border: 1px solid #ced4da; border-radius: 6px;">
+              
+              <select id="new-staff-role" style="padding: 10px; border: 1px solid #ced4da; border-radius: 6px; font-size: 1rem; background: white;">
+                <option value="housekeeper">Housekeeper (Level 003)</option>
+                <option value="front-desk">Front Desk (Level 003)</option>
+                <option value="supervisor">Supervisor (Level 002)</option>
+                <option value="manager">Manager (Level 001)</option>
+              </select>
+              
+              <button id="btn-add-staff" style="padding: 12px; background-color: var(--primary-color); color: white;">Create Account</button>
+            </div>
+            <!-- List of active staff -->
+            <div id="manager-staff-list" style="max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;"></div>
+          </div>
+      
+          <button id="btn-back-from-manager" class="back-btn" style="margin-top: auto;">Back to Dashboard</button>
+        </section>
+      
+    </main>
+
+    <footer></footer>
+
+    <script src="./app.js"></script>
+</body>
+</html>
