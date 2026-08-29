@@ -1,7 +1,7 @@
   {
     "short_name": "Housekeeper",
     "name": "Instant Housekeeper Dashboard",
-    "start_url": "/",
+    "start_url": "./",
     "background_color": "#f8f9fa",
     "theme_color": "#007bff",
     "display": "standalone",
