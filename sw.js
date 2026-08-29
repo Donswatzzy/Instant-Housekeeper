@@ -3,11 +3,11 @@ const CACHE_NAME = 'housekeeper-v1';
 // FIXED: Removed the './' and slashes entirely so assets load correctly 
 // no matter if the app is run locally or on a GitHub subfolder path!
 const ASSETS_TO_CACHE = [
-  './',
-  './index.html',
-  './style.css',
-  './app.js',
-  './manifest.json'
+  '/',
+  '/index.html',
+  '/style.css',
+  '/app.js',
+  '/manifest.json'
 ];
 
 // Install Service Worker and cache essential project files
