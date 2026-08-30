@@ -40,7 +40,7 @@ const SUPABASE_URL = "https://zguajnifwgksqzrxlycr.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpndWFqbmlmd2drc3F6cnhseWNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwMzg4MjMsImV4cCI6MjEwMzYxNDgyM30.yFqTLgkHoxck6C-x9R8ywpp1U3hE3gHUo-_CbPHqWX8";
 
 // Initialize the global cloud connection engine
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Global live session placeholders (Replaces our old local arrays)
 let roomsData = [];
@@ -113,7 +113,7 @@ const fdGridContainer = document.getElementById('frontdesk-grid-container');
 async function loadInitialCloudData() {
   try {
     // 1. Pull rooms directly from the Supabase cloud table
-    const { data: rooms, error: roomError } = await supabase
+    const { data: rooms, error: roomError } = await supabaseClient
       .from('rooms')
       .select('*');
       
@@ -121,7 +121,7 @@ async function loadInitialCloudData() {
     roomsData = rooms || [];
 
     // 2. Pull approved users registry lists
-    const { data: users, error: userError } = await supabase
+    const { data: users, error: userError } = await supabaseClient
       .from('users')
       .select('*');
       
@@ -342,7 +342,7 @@ async function loginGateway(targetDashboard) {
 
     // 1. FIXED: Changed .single() to .maybeSingle() to prevent silent app crashes
     // 2. FIXED: Swapped 'staffId' to 'staff_id' to match common database snake_case naming conventions
-    const { data: user, error } = await supabase
+    const { data: user, error } = await supabaseClient
       .from('users')
       .select('*')
       .eq('staff_id', id) 
