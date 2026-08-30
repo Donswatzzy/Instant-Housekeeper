@@ -34,8 +34,8 @@ const logoutButtons = document.querySelectorAll('.back-btn'); // Selects both lo
 // ==========================================
 // 1. SUPABASE CLOUD DATABASE CONFIGURATION
 // ==========================================
-const SUPABASE_URL = "YOUR_SUPABASE_PROJECT_URL_HERE";
-const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_PUBLISHABLE_KEY_HERE";
+const SUPABASE_URL = "https://zguajnifwgksqzrxlycr.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpndWFqbmlmd2drc3F6cnhseWNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwMzg4MjMsImV4cCI6MjEwMzYxNDgyM30.yFqTLgkHoxck6C-x9R8ywpp1U3hE3gHUo-_CbPHqWX8";
 
 // Since supabase.js is local, window.supabase is guaranteed to exist immediately on startup!
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
