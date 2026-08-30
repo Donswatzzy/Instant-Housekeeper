@@ -34,15 +34,18 @@ const logoutButtons = document.querySelectorAll('.back-btn'); // Selects both lo
 // ==========================================
 // 1. SUPABASE CLOUD DATABASE CONFIGURATION
 // ==========================================
+const SUPABASE_URL = "YOUR_SUPABASE_PROJECT_URL_HERE";
+const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_PUBLISHABLE_KEY_HERE";
 
-// Replace these placeholders with your actual keys from the Supabase API section
-const SUPABASE_URL = "https://zguajnifwgksqzrxlycr.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpndWFqbmlmd2drc3F6cnhseWNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwMzg4MjMsImV4cCI6MjEwMzYxNDgyM30.yFqTLgkHoxck6C-x9R8ywpp1U3hE3gHUo-_CbPHqWX8";
+let supabaseClient = null;
 
-// Initialize the global cloud connection engine
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Ensure the external library is present before initializing the client connection link
+if (typeof window.supabase !== 'undefined') {
+  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+} else {
+  console.error("🚨 Critical Error: The global Supabase library script was not found by the browser.");
+}
 
-// Global live session placeholders (Replaces our old local arrays)
 let roomsData = [];
 let usersRegistry = [];
 let notificationsQueue = [];
@@ -52,6 +55,7 @@ let authenticatedUser = null;
 let pendingCleanRoomId = null;
 let activeModalRoomId = null;
 let globalTimersMap = {};
+
 
 // ==========================================
 // 1.2 USER REGISTRY & ACCOUNT MANAGEMENT

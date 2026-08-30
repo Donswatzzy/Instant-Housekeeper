@@ -8,12 +8,7 @@
     "orientation": "portrait",
     "icons": [
       {
-        "src": "https://icons8.com",
-        "type": "image/png",
-        "sizes": "192x192"
-      },
-      {
-        "src": "https://icons8.com",
+        "src": "assets/icon-512.png",
         "type": "image/png",
         "sizes": "512x512"
       }
