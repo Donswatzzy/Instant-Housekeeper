@@ -9,10 +9,10 @@ function saveStateToLocalStorage() {
 let currentStaffId = "STF-001";
 
 // Stores active live alerts waiting to be seen on dashboards
-let notificationsQueue = JSON.parse(localStorage.getItem('hk_notifications')) || [];
+// let notificationsQueue = JSON.parse(localStorage.getItem('hk_notifications')) || [];
 
 // Stores the permanent historical audit trail records
-let auditHistoryLogs = JSON.parse(localStorage.getItem('hk_audit_history')) || [];
+// let auditHistoryLogs = JSON.parse(localStorage.getItem('hk_audit_history')) || [];
 
 
 // ==========================================
@@ -32,45 +32,26 @@ const logoutButtons = document.querySelectorAll('.back-btn'); // Selects both lo
 
 
 // ==========================================
-// 1. STATE OBJECT (WITH TIMERS & LOCALSTORAGE)
+// 1. SUPABASE CLOUD DATABASE CONFIGURATION
 // ==========================================
 
-// Default data template used only on the very first visit
-const defaultRooms = [
-  { 
-    id: "Room 101", 
-    status: "dirty", 
-    timerEnd: null, 
-    timerIntervalId: null, 
-    isChecked: false,
-    dirtyTimestamp: Date.now(), // Track when it became dirty
-    lastCleanedBy: null 
-  },
-  { 
-    id: "Room 102", 
-    status: "clean", 
-    timerEnd: null, 
-    timerIntervalId: null, 
-    isChecked: false,
-    dirtyTimestamp: null,
-    lastCleanedBy: "STF-002"
-  },
-  { id: "Room 103", 
-    status: "dirty", 
-    timerEnd: null, 
-    timerIntervalId: null, 
-    isChecked: false, 
-    dirtyTimestamp: Date.now(), 
-    lastCleanedBy: null 
-  },
-  { id: "Room 104", 
-    status: "dirty", 
-    timerEnd: null, 
-    timerIntervalId: null, 
-    isChecked: false, 
-    dirtyTimestamp: Date.now(), 
-    lastCleanedBy: null }
-];
+// Replace these placeholders with your actual keys from the Supabase API section
+const SUPABASE_URL = "https://zguajnifwgksqzrxlycr.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpndWFqbmlmd2drc3F6cnhseWNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwMzg4MjMsImV4cCI6MjEwMzYxNDgyM30.yFqTLgkHoxck6C-x9R8ywpp1U3hE3gHUo-_CbPHqWX8";
+
+// Initialize the global cloud connection engine
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Global live session placeholders (Replaces our old local arrays)
+let roomsData = [];
+let usersRegistry = [];
+let notificationsQueue = [];
+let auditHistoryLogs = [];
+
+let authenticatedUser = null;
+let pendingCleanRoomId = null;
+let activeModalRoomId = null;
+let globalTimersMap = {};
 
 // ==========================================
 // 1.2 USER REGISTRY & ACCOUNT MANAGEMENT
@@ -85,10 +66,10 @@ const defaultUsers = [
 ];
 
 // Load active accounts database from LocalStorage or fall back to defaults
-let usersRegistry = JSON.parse(localStorage.getItem('hk_users_registry')) || defaultUsers;
+// let usersRegistry = JSON.parse(localStorage.getItem('hk_users_registry')) || defaultUsers;
 
 // Global tracking pointer for the logged-in session profile
-let authenticatedUser = null; 
+// let authenticatedUser = null; 
 
 function saveUsersToLocalStorage() {
   localStorage.setItem('hk_users_registry', JSON.stringify(usersRegistry));
@@ -97,14 +78,14 @@ function saveUsersToLocalStorage() {
 
 
 // Initialize our state array by pulling from LocalStorage, or fallback to defaults
-let roomsData = JSON.parse(localStorage.getItem('hk_rooms_state')) || defaultRooms;
+// let roomsData = JSON.parse(localStorage.getItem('hk_rooms_state')) || defaultRooms;
 
 // Clear out interval IDs on fresh startup since old active intervals can't be stored as text
 roomsData.forEach(room => {
   room.timerIntervalId = null;
 });
 
-let activeModalRoomId = null;
+// let activeModalRoomId = null;
 
 
 // Bulk Operations & Modal DOM
@@ -120,6 +101,59 @@ const btnCancelModal = document.getElementById('btn-cancel-modal');
 // Our new data container placeholders
 const hkRoomsContainer = document.getElementById('housekeeper-rooms-container');
 const fdGridContainer = document.getElementById('frontdesk-grid-container');
+
+
+// ==========================================
+// 1.5 LIVE SYNC CLOUD FETCH DATA CHANNELS
+// ==========================================
+
+/**
+ * Downloads the latest room layout matrix and active accounts list from the cloud
+ */
+async function loadInitialCloudData() {
+  try {
+    // 1. Pull rooms directly from the Supabase cloud table
+    const { data: rooms, error: roomError } = await supabase
+      .from('rooms')
+      .select('*');
+      
+    if (roomError) throw roomError;
+    roomsData = rooms || [];
+
+    // 2. Pull approved users registry lists
+    const { data: users, error: userError } = await supabase
+      .from('users')
+      .select('*');
+      
+    if (userError) throw userError;
+    usersRegistry = users || [];
+
+    console.log("⚡ Supabase Cloud connection healthy! Data arrays loaded.");
+    
+    // Check and restore active countdown timers if a room is 'in-use'
+    restoreActiveCloudTimers();
+
+  } catch (err) {
+    console.error("❌ Cloud sync execution failure:", err.message);
+    alert("Database connection error. Operating on local fallbacks.");
+  }
+}
+
+function restoreActiveCloudTimers() {
+  roomsData.forEach(room => {
+    if (room.status === 'in-use' && room.timer_end) {
+      const parsedTimerEnd = new Date(room.timer_end).getTime();
+      if (parsedTimerEnd <= Date.now()) {
+        // Timer expired while app was closed, process expiration patch
+        triggerRoomTimerExpiration(room.id);
+      } else {
+        // Re-anchor the running interval loop pointer
+        runCloudTimerClockLoop(room, parsedTimerEnd);
+      }
+    }
+  });
+};
+
 
 // ==========================================
 // 2.5 VALIDATED LOGIN CONTROLLER
@@ -174,7 +208,7 @@ logoutButtons.forEach(button => {
 // 2.7 PHASE 2: HOUSEKEEPER ACTION WINDOW MODAL ENGINE
 // ==========================================
 
-let pendingCleanRoomId = null; // Caches target element reference safely while user selects targets
+// let pendingCleanRoomId = null; // Caches target element reference safely while user selects targets
 
 const cleanConfirmModal = document.getElementById('clean-confirm-modal');
 const confirmRoomLabel = document.getElementById('confirm-modal-room-label');
@@ -296,60 +330,97 @@ function formatTimeDuration(ms) {
 
 
 // ==========================================
+// 3. VALIDATED CLOUD LOGIN GATEWAY
+// ==========================================
+async function loginGateway(targetDashboard) {
+  const id = staffIdInput.value.trim().toUpperCase();
+  
+  if (!id) return alert("⚠️ Please enter your Staff ID to clock in.");
+
+  // Request matching record from Supabase table immediately
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('staffId', id) // Checks if column staffId matches entered id string
+    .single(); // Returns exactly one object row instead of an array
+
+  if (error || !user) {
+    return alert("❌ Access Denied: Invalid or Unapproved Staff ID.");
+  }
+
+  // Bind session authorization token profiles
+  authenticatedUser = user;
+  
+  if (targetDashboard === 'housekeeper') {
+    if (user.level === "000" || user.subRole === "housekeeper") {
+      showView(housekeeperView);
+    } else {
+      alert("🔒 Error: Level unauthorized for Housekeeper terminal.");
+    }
+  } else {
+    if (user.level !== "003" || user.subRole === "front-desk") {
+      showView(frontdeskView);
+    } else {
+      alert("🔒 Error: Level unauthorized for Front Desk terminal.");
+    }
+  }
+};
+
+// ==========================================
 // 3. RENDER FUNCTIONS (Drawing UI from Data)
 // ==========================================
 
-function renderHousekeeperView() {
-  hkRoomsContainer.innerHTML = "";
-  roomsData.forEach(room => {
-    // Housekeepers can only clean items that are explicitly "dirty"
-    const canClean = room.status === 'dirty';
-    const btnClass = room.status; 
-    const btnText = room.status === 'clean' ? 'Cleaned ✓' : (room.status === 'in-use' ? 'In Use (Occupied)' : 'Mark Clean');
-    const isDisabled = !canClean ? 'disabled style="background-color: #28a745; color: white; cursor: default;"' : '';
+// function renderHousekeeperView() {
+//   hkRoomsContainer.innerHTML = "";
+//   roomsData.forEach(room => {
+//     // Housekeepers can only clean items that are explicitly "dirty"
+//     const canClean = room.status === 'dirty';
+//     const btnClass = room.status; 
+//     const btnText = room.status === 'clean' ? 'Cleaned ✓' : (room.status === 'in-use' ? 'In Use (Occupied)' : 'Mark Clean');
+//     const isDisabled = !canClean ? 'disabled style="background-color: #28a745; color: white; cursor: default;"' : '';
 
-    const roomCard = document.createElement('div');
-    roomCard.className = 'room-card';
-    roomCard.innerHTML = `
-      <span>${room.id}</span>
-      <button class="status-btn ${btnClass}" ${isDisabled} data-room-id="${room.id}">
-        ${btnText}
-      </button>
-    `;
-    hkRoomsContainer.appendChild(roomCard);
-  });
-  attachHousekeeperButtonListeners();
-};
+//     const roomCard = document.createElement('div');
+//     roomCard.className = 'room-card';
+//     roomCard.innerHTML = `
+//       <span>${room.id}</span>
+//       <button class="status-btn ${btnClass}" ${isDisabled} data-room-id="${room.id}">
+//         ${btnText}
+//       </button>
+//     `;
+//     hkRoomsContainer.appendChild(roomCard);
+//   });
+//   attachHousekeeperButtonListeners();
+// };
 
 
-function renderFrontDeskView() {
-  fdGridContainer.innerHTML = "";
+// function renderFrontDeskView() {
+//   fdGridContainer.innerHTML = "";
   
-  roomsData.forEach(room => {
-    const card = document.createElement('div');
-    card.className = `fd-card ${room.status}`;
+//   roomsData.forEach(room => {
+//     const card = document.createElement('div');
+//     card.className = `fd-card ${room.status}`;
 
-    let timerSnippet = '';
-    if (room.status === 'in-use' && room.timerEnd) {
-      const timeLeft = Math.max(0, Math.round((room.timerEnd - Date.now()) / 1000));
-      timerSnippet = `<div class="timer-display" id="text-timer-${room.id.replace(/\s+/g, '')}">⏳ Auto-Dirty in: ${timeLeft}s</div>`;
-    }
+//     let timerSnippet = '';
+//     if (room.status === 'in-use' && room.timerEnd) {
+//       const timeLeft = Math.max(0, Math.round((room.timerEnd - Date.now()) / 1000));
+//       timerSnippet = `<div class="timer-display" id="text-timer-${room.id.replace(/\s+/g, '')}">⏳ Auto-Dirty in: ${timeLeft}s</div>`;
+//     }
 
-    // Notice the addition of: ${room.isChecked ? 'checked' : ''}
-    card.innerHTML = `
-      <div class="fd-header">
-        <span>${room.id}</span>
-        <input type="checkbox" class="fd-checkbox" data-room-id="${room.id}" ${room.isChecked ? 'checked' : ''}>
-      </div>
-      <div>Status: <strong>${room.status.toUpperCase()}</strong></div>
-      <div class="timer-wrapper">${timerSnippet}</div>
-      ${room.status === 'clean' ? `<button class="fd-action-btn" data-room-id="${room.id}">Set Short Stay</button>` : ''}
-    `;
-    fdGridContainer.appendChild(card);
-  });
+//     // Notice the addition of: ${room.isChecked ? 'checked' : ''}
+//     card.innerHTML = `
+//       <div class="fd-header">
+//         <span>${room.id}</span>
+//         <input type="checkbox" class="fd-checkbox" data-room-id="${room.id}" ${room.isChecked ? 'checked' : ''}>
+//       </div>
+//       <div>Status: <strong>${room.status.toUpperCase()}</strong></div>
+//       <div class="timer-wrapper">${timerSnippet}</div>
+//       ${room.status === 'clean' ? `<button class="fd-action-btn" data-room-id="${room.id}">Set Short Stay</button>` : ''}
+//     `;
+//     fdGridContainer.appendChild(card);
+//   });
 
-  attachFrontDeskCardListeners();
-};
+//   attachFrontDeskCardListeners();
+// };
 
 // ==========================================
 // 3.5 NOTIFICATION FEED RENDERING ENGINE
@@ -1152,6 +1223,8 @@ setInterval(() => {
 }, 1000);
 
 
+// Automatically trigger network pull requests on application lifecycle startup
+loadInitialCloudData();
 
 
 
