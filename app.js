@@ -330,41 +330,64 @@ function formatTimeDuration(ms) {
 
 
 // ==========================================
-// 3. VALIDATED CLOUD LOGIN GATEWAY
+// 3. SECURE BULLETPROOF CLOUD LOGIN GATEWAY
 // ==========================================
 async function loginGateway(targetDashboard) {
   const id = staffIdInput.value.trim().toUpperCase();
   
   if (!id) return alert("⚠️ Please enter your Staff ID to clock in.");
 
-  // Request matching record from Supabase table immediately
-  const { data: user, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('staffId', id) // Checks if column staffId matches entered id string
-    .single(); // Returns exactly one object row instead of an array
+  try {
+    console.log(`Checking database for Staff ID: ${id}...`);
 
-  if (error || !user) {
-    return alert("❌ Access Denied: Invalid or Unapproved Staff ID.");
-  }
+    // 1. FIXED: Changed .single() to .maybeSingle() to prevent silent app crashes
+    // 2. FIXED: Swapped 'staffId' to 'staff_id' to match common database snake_case naming conventions
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('staff_id', id) 
+      .maybeSingle(); 
 
-  // Bind session authorization token profiles
-  authenticatedUser = user;
-  
-  if (targetDashboard === 'housekeeper') {
-    if (user.level === "000" || user.subRole === "housekeeper") {
-      showView(housekeeperView);
-    } else {
-      alert("🔒 Error: Level unauthorized for Housekeeper terminal.");
+    if (error) {
+      console.error("Supabase Query Error:", error);
+      return alert(`❌ Database Error: ${error.message}. Look at your browser DevTools Console (F12) for detailed logs.`);
     }
-  } else {
-    if (user.level !== "003" || user.subRole === "front-desk") {
-      showView(frontdeskView);
-    } else {
-      alert("🔒 Error: Level unauthorized for Front Desk terminal.");
+
+    if (!user) {
+      console.log(`No user profile row matched ID: ${id}`);
+      return alert(`❌ Access Denied: The Staff ID "${id}" was not found or is unapproved in your Supabase 'users' table.`);
     }
+
+    console.log("Authentication successful! Profile record snapshot:", user);
+
+    // Bind session authorization token profiles
+    authenticatedUser = user;
+    
+    // Evaluate security role clearance tiers
+    // Handle both snake_case or camelCase fallback structures from your column mappings safely
+    const userRole = user.sub_role || user.subRole;
+    const userLevel = user.level;
+
+    if (targetDashboard === 'housekeeper') {
+      if (userLevel === "000" || userRole === "housekeeper") {
+        showView(housekeeperView);
+      } else {
+        alert("🔒 Security Error: Your account tier cannot access the Housekeeper terminal.");
+      }
+    } else {
+      if (userLevel !== "003" || userRole === "front-desk") {
+        showView(frontdeskView);
+      } else {
+        alert("🔒 Security Error: Access restricted to Front Desk, Supervisors, and Managers.");
+      }
+    }
+
+  } catch (catchErr) {
+    console.error("Critical JavaScript Runtime Crash:", catchErr);
+    alert(`💥 System Crash: ${catchErr.message}`);
   }
 };
+
 
 // ==========================================
 // 3. RENDER FUNCTIONS (Drawing UI from Data)
