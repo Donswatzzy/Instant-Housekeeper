@@ -37,14 +37,8 @@ const logoutButtons = document.querySelectorAll('.back-btn'); // Selects both lo
 const SUPABASE_URL = "YOUR_SUPABASE_PROJECT_URL_HERE";
 const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_PUBLISHABLE_KEY_HERE";
 
-let supabaseClient = null;
-
-// Ensure the external library is present before initializing the client connection link
-if (typeof window.supabase !== 'undefined') {
-  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-} else {
-  console.error("🚨 Critical Error: The global Supabase library script was not found by the browser.");
-}
+// Since supabase.js is local, window.supabase is guaranteed to exist immediately on startup!
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let roomsData = [];
 let usersRegistry = [];
@@ -61,13 +55,13 @@ let globalTimersMap = {};
 // 1.2 USER REGISTRY & ACCOUNT MANAGEMENT
 // ==========================================
 
-const defaultUsers = [
-  { staffId: "DEV-001", name: "Lead Developer", level: "000", subRole: "admin" },
-  { staffId: "MGR-001", name: "General Manager", level: "001", subRole: "manager" },
-  { staffId: "FD-001", name: "Main FrontDesk", level: "003", subRole: "front-desk" },
-  { staffId: "STF-001", name: "Housekeeper One", level: "004", subRole: "housekeeper" },
-  { staffId: "STF-002", name: "Housekeeper Two", level: "004", subRole: "housekeeper" }
-];
+// const defaultUsers = [
+//   { staffId: "DEV-001", name: "Lead Developer", level: "000", subRole: "admin" },
+//   { staffId: "MGR-001", name: "General Manager", level: "001", subRole: "manager" },
+//   { staffId: "FD-001", name: "Main FrontDesk", level: "003", subRole: "front-desk" },
+//   { staffId: "STF-001", name: "Housekeeper One", level: "004", subRole: "housekeeper" },
+//   { staffId: "STF-002", name: "Housekeeper Two", level: "004", subRole: "housekeeper" }
+// ];
 
 // Load active accounts database from LocalStorage or fall back to defaults
 // let usersRegistry = JSON.parse(localStorage.getItem('hk_users_registry')) || defaultUsers;

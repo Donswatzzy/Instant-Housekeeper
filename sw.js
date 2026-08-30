@@ -1,14 +1,13 @@
-const CACHE_NAME = 'housekeeper-v1';
-
-// FIXED: Removed the './' and slashes entirely so assets load correctly 
-// no matter if the app is run locally or on a GitHub subfolder path!
-const ASSETS_TO_CACHE = [
+const CACHE_NAME = 'housekeeper-v4'; // Incremented to force an instant fresh device reload
+const ASSETS = [
   '/',
   'index.html',
   'style.css',
   'app.js',
+  'supabase.js', // <-- ADD THIS LINE HERE
   'manifest.json'
 ];
+
 // Keep the rest of your sw.js file exactly the same!
 
 
